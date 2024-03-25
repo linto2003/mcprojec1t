@@ -19,12 +19,14 @@ class _SignupPageState extends State<SignupPage> {
   TextEditingController passwordController = TextEditingController();
   TextEditingController nameController = TextEditingController();
   TextEditingController phoneController = TextEditingController();
+  TextEditingController cityController = TextEditingController();
 
   void _signup() async {
     String email = emailController.text;
     String password = passwordController.text;
     String name = nameController.text;
     String phone = phoneController.text;
+    String city = cityController.text;
 
     try {
       UserCredential userCredential =
@@ -33,7 +35,7 @@ class _SignupPageState extends State<SignupPage> {
         password: password,
       );
       await FirestoreServices.saveUser(
-          name, email, phone, userCredential.user!.uid);
+          name, email, phone, city, userCredential.user!.uid);
       print('User registered: ${userCredential.user!.email}');
       Navigator.pushReplacement(
         context,
@@ -135,6 +137,13 @@ class _SignupPageState extends State<SignupPage> {
                         hinttext: 'Enter valid Password',
                         icon: Icons.password,
                         password: true),
+                    SizedBox(height: 20),
+                    textFeild(
+                        Controller: cityController,
+                        labeltext: 'city',
+                        hinttext: 'Enter valid city',
+                        icon: Icons.location_city,
+                        password: false),
                     SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: _signup,

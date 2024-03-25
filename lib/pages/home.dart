@@ -1,11 +1,21 @@
-import 'dart:html';
+import 'dart:math';
 import 'dart:typed_data';
-
+import 'package:geolocator/geolocator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mcproj/constants/const.dart';
 import 'package:mcproj/pages/medicine_page.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../auth/logIn.dart';
+import '../services/functions/locationService.dart';
+
+late String lat;
+late String long;
 
 class HomePage extends StatefulWidget {
   static const route = '/home';
@@ -15,19 +25,116 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  XFile? _image;
+  late Uint8List _image;
+  ImageProvider imageProvider = AssetImage('assets/linto.png');
+  Position? userlocation;
+  bool isLoading = false;
 
-  Future<void> _getImageFromLibrary() async {
-    final XFile? pickedImage =
-        await ImagePicker().pickImage(source: ImageSource.gallery);
-
+  void redirectToURL({required String query}) async {
     setState(() {
-      if (pickedImage != null) {
-        _image = pickedImage;
-      } else {
-        print('No image selected.');
-      }
+      isLoading = true;
+      showDialog(
+          context: context,
+          builder: (context) {
+            return Center(
+              child: CircularProgressIndicator(
+                color: Constants.all_color,
+              ),
+            );
+          });
+      // Navigator.push(context,
+      //     MaterialPageRoute(builder: (context) {
+      //       return Scaffold(
+      //         backgroundColor: Colors.transparent,
+      //         body: Center(
+      //           child: CircularProgressIndicator(
+      //             color: greenColor,
+      //           ),
+      //         ),
+      //       );
+      //     }));
     });
+    Position position = await determinePosition();
+    setState(() {
+      lat = position.latitude.toString();
+      long = position.longitude.toString();
+      isLoading = false;
+      Navigator.of(context).pop();
+    });
+
+    var url = Uri.parse(
+        "https://www.google.com/maps/search/$query/@$lat,$long,15.25z?entry=ttu");
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
+      }
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  Future<void> uploadImageAndUpdateFirestore(imageBytes, user) async {
+    try {
+      // Existing code for storage reference and image upload
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('user_images/${DateTime.now().millisecondsSinceEpoch}');
+      await storageRef.putData(imageBytes);
+
+      // Get download URL
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      // Access user document (replace with your user ID logic)
+      final firestore = FirebaseFirestore.instance;
+      final userDoc = firestore.collection('users').doc(user?.uid);
+
+      // Update Firestore with download URL
+      await userDoc.update({
+        'imageUrl': downloadUrl,
+      });
+
+      // Update state after successful upload (if applicable)
+      setState(() {
+        // ... your state updates
+      });
+    } catch (error) {
+      // Handle errors here
+      print(error.toString()); // Log the error for debugging
+      // Display an error message to the user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error uploading image: ${error.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void navigateToProducts() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ProductListPage()),
+    );
+  }
+
+  Future<void> logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      // Navigate to the login screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
+    } on FirebaseAuthException catch (e) {
+      // Handle sign out errors
+      print(e.message);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message!),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -64,30 +171,51 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
+
+            /// Exp 7
             Center(
               child: Container(
                 decoration: BoxDecoration(
                   color: Constants.all_color,
                 ),
                 child: GestureDetector(
-                    onTap: () async {},
-                    child: Container(
-                      child: _image != null
-                          ? CircleAvatar(
-                              radius: 80,
-                              backgroundImage: MemoryImage(
-                                  _image!) // Replace with your user's image
-                              )
-                          : const CircleAvatar(
-                              radius: 80,
-                              backgroundImage: AssetImage(
-                                  'assets/linto.png'), // Replace with your user's image
-                            ),
-                    )),
+                  onTap: () async {
+                    // Get image from gallery
+                    final image = await ImagePicker()
+                        .pickImage(source: ImageSource.gallery);
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (image != null) {
+                      // Read image bytes and update state
+                      final imageBytes = await image.readAsBytes();
+                      uploadImageAndUpdateFirestore(imageBytes, user);
+                      setState(() {
+                        print('image changes');
+                        _image = imageBytes;
+                        imageProvider = _image != null
+                            ? MemoryImage(_image!) as ImageProvider
+                            : AssetImage('assets/linto.png') as ImageProvider;
+                      });
+                    } else {
+                      print("Image Null");
+                    }
+                  },
+                  child: Container(
+                      child: CircleAvatar(
+                          radius: 80, backgroundImage: imageProvider)),
+                ),
               ),
             ),
             ListTile(
-              title: Text('Item 1'),
+              titleAlignment: ListTileTitleAlignment.center,
+              title: Center(
+                child: Text(
+                  'Item 1',
+                  style: GoogleFonts.getFont('Poppins',
+                      fontSize: 20,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
               onTap: () {
                 // Update the UI based on the item selected
                 // Close the drawer
@@ -95,11 +223,17 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             ListTile(
-              title: Text('Item 2'),
+              title: Center(
+                child: Text(
+                  'LogOut',
+                  style: GoogleFonts.getFont('Poppins',
+                      fontSize: 20,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
               onTap: () {
-                // Update the UI based on the item selected
-                // Close the drawer
-                Navigator.pop(context);
+                logout();
               },
             ),
           ],
@@ -148,16 +282,18 @@ class _HomePageState extends State<HomePage> {
                 ),
                 Container(
                   margin: EdgeInsets.all(25),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Button(
                         image: 'assets/icon1.png',
-                        text: 'FIND MEDICINE',
+                        text: 'Products',
+                        onTap: navigateToProducts,
                       ),
                       Button(
                         image: 'assets/icon2.png',
                         text: 'DONATE',
+                        onTap: () {},
                       ),
                     ],
                   ),
@@ -165,6 +301,9 @@ class _HomePageState extends State<HomePage> {
                 Button(
                   image: 'assets/icon3.png',
                   text: 'MEDICAL SHOPS / NGOS',
+                  onTap: () {
+                    redirectToURL(query: 'Medical shops');
+                  },
                 ),
               ],
             ),
@@ -179,25 +318,23 @@ class Button extends StatefulWidget {
   const Button({
     required this.image,
     required this.text,
+    required this.onTap, // Optional onTap callback
     super.key,
   });
+
   final String image;
   final String text;
-
+  final void Function() onTap;
   @override
   State<Button> createState() => _ButtonState();
 }
 
 class _ButtonState extends State<Button> {
+  // Optional onTap callback type
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => ProductListPage()),
-        );
-      },
+      onTap: widget.onTap, // Use the provided onTap callback if available
       child: Column(
         children: [
           Image.asset(
@@ -208,30 +345,9 @@ class _ButtonState extends State<Button> {
             widget.text,
             style: GoogleFonts.getFont('Poppins',
                 fontSize: 20, color: Colors.black, fontWeight: FontWeight.w600),
-          )
+          ),
         ],
       ),
-    );
-  }
-}
-
-class ImageEditorScreen extends StatelessWidget {
-  final ImageProvider image;
-
-  const ImageEditorScreen({Key? key, required this.image}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Image Editor'),
-      ),
-      body: Center(
-        child: Image(
-          image: image,
-        ),
-      ),
-// Add buttons or other widgets here for editing functionality (cropping, filters, etc.)
     );
   }
 }
