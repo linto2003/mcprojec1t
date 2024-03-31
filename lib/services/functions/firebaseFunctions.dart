@@ -9,4 +9,27 @@ class FirestoreServices {
       'city': city,
     });
   }
+
+  static saveMed(
+      String med_name,
+      String comp,
+      List<String> side,
+      List<String> use,
+      String date,
+      String url,
+      String place,
+      String name,
+      String contact) async {
+    await FirebaseFirestore.instance.collection('donations').add({
+      'med_name': med_name,
+      'composition': comp,
+      'side-effects': side,
+      'uses': use,
+      'expiry_date': date,
+      'url': url,
+      'place': place,
+      'name': name,
+      'contact': contact
+    });
+  }
 }

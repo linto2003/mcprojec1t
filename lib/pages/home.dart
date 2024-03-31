@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:typed_data';
+import 'package:flutter/cupertino.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,10 +10,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mcproj/constants/const.dart';
 import 'package:mcproj/pages/medicine_page.dart';
+import 'package:mcproj/pages/search%20page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../auth/logIn.dart';
 import '../services/functions/locationService.dart';
+import 'donate.dart';
 
 late String lat;
 late String long;
@@ -113,7 +116,14 @@ class _HomePageState extends State<HomePage> {
   void navigateToProducts() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ProductListPage()),
+      MaterialPageRoute(builder: (context) => MedicineSearchPage()),
+    );
+  }
+
+  void navigateToDonate() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => DonatePage()),
     );
   }
 
@@ -209,7 +219,7 @@ class _HomePageState extends State<HomePage> {
               titleAlignment: ListTileTitleAlignment.center,
               title: Center(
                 child: Text(
-                  'Item 1',
+                  'Donations',
                   style: GoogleFonts.getFont('Poppins',
                       fontSize: 20,
                       color: Colors.white,
@@ -249,63 +259,66 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           // Content
-          Container(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(
-                  height: 30,
-                ),
-                Text(
-                  'Share Healing,\n'
-                  ' Share Hope',
-                  style: GoogleFonts.getFont('Poppins',
-                      fontSize: 30,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(
-                  height: 140,
-                ),
-                Text(
-                  'Connecting kindness with \n'
-                  'every medicine shared',
-                  style: GoogleFonts.getFont('Poppins',
-                      fontSize: 20,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold),
-                ),
-                SizedBox(
-                  height: 50,
-                ),
-                Container(
-                  margin: EdgeInsets.all(25),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Button(
-                        image: 'assets/icon1.png',
-                        text: 'Products',
-                        onTap: navigateToProducts,
-                      ),
-                      Button(
-                        image: 'assets/icon2.png',
-                        text: 'DONATE',
-                        onTap: () {},
-                      ),
-                    ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    height: 30,
                   ),
-                ),
-                Button(
-                  image: 'assets/icon3.png',
-                  text: 'MEDICAL SHOPS / NGOS',
-                  onTap: () {
-                    redirectToURL(query: 'Medical shops');
-                  },
-                ),
-              ],
+                  Text(
+                    'Share Healing,\n'
+                    ' Share Hope',
+                    style: GoogleFonts.getFont('Poppins',
+                        fontSize: 30,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(
+                    height: 140,
+                  ),
+                  Text(
+                    'Connecting kindness with \n'
+                    'every medicine shared',
+                    style: GoogleFonts.getFont('Poppins',
+                        fontSize: 20,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(
+                    height: 50,
+                  ),
+                  Container(
+                    margin: EdgeInsets.all(25),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Button(
+                          image: 'assets/icon1.png',
+                          text: 'Products',
+                          onTap: navigateToProducts,
+                        ),
+                        Button(
+                          image: 'assets/icon2.png',
+                          text: 'DONATE',
+                          onTap: navigateToDonate,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Button(
+                    image: 'assets/icon3.png',
+                    text: 'MEDICAL SHOPS / NGOS',
+                    onTap: () {
+                      redirectToURL(query: 'Medical shops');
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ],
